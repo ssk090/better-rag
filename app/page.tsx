@@ -2,14 +2,30 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Toast } from "@/components/ui/toast"
-import { Send, FileText, MessageCircle, Bot, User, Upload, File, X, Link, Copy, Youtube } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Send,
+  FileText,
+  MessageCircle,
+  Bot,
+  User,
+  Upload,
+  File,
+  X,
+  Link,
+  Copy,
+  Youtube,
+  Settings,
+  Key,
+} from "lucide-react"
 
 interface Message {
   id: string
@@ -24,6 +40,12 @@ interface UploadedFile {
   size: number
   type: string
   content?: string
+}
+
+interface ApiKeys {
+  openai: string
+  anthropic: string
+  groq: string
 }
 
 type InputType = "upload" | "link" | "text" | "youtube"
@@ -42,6 +64,39 @@ export default function RAGApplication() {
   const SOURCE_LIMIT = 300
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
+
+  const [apiKeys, setApiKeys] = useState<ApiKeys>({
+    openai: "",
+    anthropic: "",
+    groq: "",
+  })
+  const [isApiKeysDialogOpen, setIsApiKeysDialogOpen] = useState(false)
+  const [tempApiKeys, setTempApiKeys] = useState<ApiKeys>({
+    openai: "",
+    anthropic: "",
+    groq: "",
+  })
+
+  useEffect(() => {
+    const savedKeys = localStorage.getItem("rag-api-keys")
+    if (savedKeys) {
+      const parsedKeys = JSON.parse(savedKeys)
+      setApiKeys(parsedKeys)
+      setTempApiKeys(parsedKeys)
+    }
+  }, [])
+
+  const saveApiKeys = () => {
+    setApiKeys(tempApiKeys)
+    localStorage.setItem("rag-api-keys", JSON.stringify(tempApiKeys))
+    setIsApiKeysDialogOpen(false)
+    setToastMessage("API keys saved successfully!")
+    setShowToast(true)
+  }
+
+  const hasApiKeys = () => {
+    return apiKeys.openai || apiKeys.anthropic || apiKeys.groq
+  }
 
   const parseUrls = (urlText: string): string[] => {
     return urlText
@@ -291,9 +346,76 @@ export default function RAGApplication() {
       {showToast && <Toast message={toastMessage} type="success" onClose={() => setShowToast(false)} />}
 
       <div className="container mx-auto p-4 h-screen">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">RAG Application</h1>
-          <p className="text-sm text-muted-foreground mt-2">Add sources and start asking questions</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">RAG Application</h1>
+            <p className="text-sm text-muted-foreground mt-2">Add sources and start asking questions</p>
+          </div>
+
+          <Dialog open={isApiKeysDialogOpen} onOpenChange={setIsApiKeysDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                <Settings className="h-4 w-4" />
+                API Keys
+                {hasApiKeys() && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Key className="h-5 w-5" />
+                  Configure API Keys
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  Enter your API keys to enable AI-powered responses. Keys are stored locally in your browser.
+                </p>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="openai-key" className="text-sm font-medium">
+                    OpenAI API Key
+                  </label>
+                  <Input
+                    id="openai-key"
+                    type="password"
+                    placeholder="sk-..."
+                    value={tempApiKeys.openai}
+                    onChange={(e) => setTempApiKeys((prev) => ({ ...prev, openai: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="anthropic-key" className="text-sm font-medium">
+                    Anthropic API Key
+                  </label>
+                  <Input
+                    id="anthropic-key"
+                    type="password"
+                    placeholder="sk-ant-..."
+                    value={tempApiKeys.anthropic}
+                    onChange={(e) => setTempApiKeys((prev) => ({ ...prev, anthropic: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="groq-key" className="text-sm font-medium">
+                    Groq API Key
+                  </label>
+                  <Input
+                    id="groq-key"
+                    type="password"
+                    placeholder="gsk_..."
+                    value={tempApiKeys.groq}
+                    onChange={(e) => setTempApiKeys((prev) => ({ ...prev, groq: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsApiKeysDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={saveApiKeys}>Save Keys</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-140px)]">
