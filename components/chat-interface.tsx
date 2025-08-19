@@ -67,7 +67,7 @@ export function ChatInterface({
           >
             <div className="space-y-4 pr-4 pb-4">
               {messages.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8 italic">
+                <div className="text-center text-muted-foreground py-8 italic opacity-30">
                   {isDocumentSubmitted
                     ? "Start asking questions about your sources..."
                     : "Please add sources first to begin chatting"}
