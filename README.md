@@ -9,7 +9,8 @@ A modern, user-friendly Retrieval-Augmented Generation (RAG) application that al
 
 **[https://better-rag.vercel.app/](https://better-rag.vercel.app/)**
 
-<img width="1571" height="1278" alt="image" src="https://github.com/user-attachments/assets/d9633e06-6d74-42fc-b950-50d3d667a9e9" />
+<img width="1613" height="1279" alt="image" src="https://github.com/user-attachments/assets/cdd2a967-69ed-4d58-bc95-59eb27564453" />
+
 
 ## 📖 Overview
 
