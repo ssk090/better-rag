@@ -6,6 +6,7 @@ import { DocumentInputSection } from "@/components/document-input-section";
 import { ChatInterface } from "@/components/chat-interface";
 import { useRAGStore } from "@/lib/store";
 import { X } from "lucide-react";
+import { Footer } from "@/components/footer";
 
 export default function RAGApplication() {
   const {
@@ -100,7 +101,7 @@ export default function RAGApplication() {
         </div>
       )}
 
-      <div className="container mx-auto p-4 h-screen">
+      <div className="container mx-auto p-4 h-screen flex flex-col">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -121,7 +122,7 @@ export default function RAGApplication() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-140px)]">
+        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-6 min-h-0">
           <DocumentInputSection
             inputType={inputType}
             documentText={documentText}
@@ -147,14 +148,23 @@ export default function RAGApplication() {
             onClearAllSources={clearAllSources}
           />
 
-          <ChatInterface
-            messages={messages}
-            currentMessage={currentMessage}
-            isDocumentSubmitted={isDocumentSubmitted}
-            onCurrentMessageChange={setCurrentMessage}
-            onSendMessage={handleSendMessage}
-            onKeyPress={handleKeyPress}
-          />
+          <div className="flex flex-col">
+            <ChatInterface
+              messages={messages}
+              currentMessage={currentMessage}
+              isDocumentSubmitted={isDocumentSubmitted}
+              onCurrentMessageChange={setCurrentMessage}
+              onSendMessage={handleSendMessage}
+              onKeyPress={handleKeyPress}
+            />
+            <div className="lg:hidden">
+              <Footer />
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden lg:block mt-6">
+          <Footer />
         </div>
       </div>
     </div>
