@@ -112,15 +112,8 @@ export class LangChainProcessor {
         // Use TextLoader or CSVLoader with proper configuration
         if (fileType === "text/csv") {
           try {
-            console.log("Processing CSV file:", file.name, "Size:", file.size);
-
             // First check if file has content by reading it as text
             const fileContent = await this.extractTextFromFile(file);
-            console.log("Raw file content check:", {
-              contentLength: fileContent.length,
-              preview: fileContent.substring(0, 300),
-              hasContent: fileContent.trim().length > 0,
-            });
 
             if (!fileContent || fileContent.trim().length === 0) {
               console.warn(
@@ -142,16 +135,9 @@ export class LangChainProcessor {
             } else {
               // Try CSVLoader first with proper configuration
               try {
-                console.log("Attempting to use CSVLoader...");
                 const loader = new CSVLoader(file);
                 documents = await loader.load();
                 content = documents.map((doc) => doc.pageContent).join("\n\n");
-
-                console.log("CSVLoader result:", {
-                  documentCount: documents.length,
-                  contentLength: content.length,
-                  firstDocument: documents[0]?.pageContent?.substring(0, 100),
-                });
 
                 // If CSV loading resulted in empty content, fall back to text extraction
                 if (!content || content.trim().length === 0) {
@@ -159,10 +145,6 @@ export class LangChainProcessor {
                     "CSVLoader returned empty content, falling back to text extraction"
                   );
                   content = fileContent; // Use the already extracted content
-                  console.log("Using text extraction result:", {
-                    contentLength: content.length,
-                    preview: content.substring(0, 200),
-                  });
                   // Create a single document from the text content
                   documents = [
                     new Document({
@@ -187,18 +169,13 @@ export class LangChainProcessor {
                   const lines = fileContent
                     .split("\n")
                     .filter((line) => line.trim().length > 0);
-                  console.log(
-                    `Manual parsing: Found ${lines.length} non-empty lines`
-                  );
 
                   if (lines.length > 0) {
                     // Parse headers - handle quoted values properly
                     const headerLine = lines[0];
-                    console.log(`Header line: "${headerLine}"`);
 
                     // Simple CSV parsing that handles basic cases
                     const headers = this.parseCSVLine(headerLine);
-                    console.log(`Parsed headers:`, headers);
 
                     if (headers.length > 0) {
                       // Parse data rows
@@ -213,7 +190,6 @@ export class LangChainProcessor {
                       });
 
                       content = rows.join("\n");
-                      console.log(`Parsed ${rows.length} data rows`);
                     } else {
                       // If headers couldn't be parsed, treat as plain text
                       console.warn(
@@ -240,11 +216,6 @@ export class LangChainProcessor {
                       },
                     }),
                   ];
-
-                  console.log("Manual CSV parsing result:", {
-                    contentLength: content.length,
-                    preview: content.substring(0, 200),
-                  });
                 } catch (parseError) {
                   console.warn(
                     "Manual CSV parsing also failed, using raw content:",
@@ -274,10 +245,6 @@ export class LangChainProcessor {
             );
             // Fallback to text extraction if CSV loading fails
             content = await this.extractTextFromFile(file);
-            console.log("Text extraction fallback result:", {
-              contentLength: content.length,
-              preview: content.substring(0, 200),
-            });
             // Create a single document from the text content
             documents = [
               new Document({
@@ -373,12 +340,6 @@ export class LangChainProcessor {
         }
       }
 
-      console.log(`Final processing result for ${file.name}:`, {
-        contentLength: content.length,
-        documentCount: documents.length,
-        hasContent: content.trim().length > 0,
-      });
-
       // Generate summary
       const summary = this.generateSummary(content, documents.length);
 
@@ -409,8 +370,6 @@ export class LangChainProcessor {
         .toString(36)
         .substr(2, 9)}`;
 
-      console.log(`Processing URL: ${url}`);
-
       // Use HTMLWebBaseLoader to fetch and load the HTML content
       const loader = new HTMLWebBaseLoader(url);
       const htmlDocs = await loader.load();
@@ -418,8 +377,6 @@ export class LangChainProcessor {
       if (!htmlDocs || htmlDocs.length === 0) {
         throw new Error(`Failed to load content from URL: ${url}`);
       }
-
-      console.log(`HTML loader returned ${htmlDocs.length} documents`);
 
       // Use HtmlToTextTransformer to convert HTML to clean text
       const transformer = new HtmlToTextTransformer();
@@ -429,16 +386,12 @@ export class LangChainProcessor {
         throw new Error(`Failed to transform HTML to text from URL: ${url}`);
       }
 
-      console.log(`Text transformer returned ${textDocs.length} documents`);
-
       // Combine all text content
       const content = textDocs.map((doc) => doc.pageContent).join("\n\n");
 
       if (!content || content.trim().length === 0) {
         throw new Error(`No content extracted from URL: ${url}`);
       }
-
-      console.log(`Extracted content length: ${content.length} characters`);
 
       // Split the content into chunks
       const chunks = await this.textSplitter.splitText(content);
@@ -681,12 +634,6 @@ export class LangChainProcessor {
 
       // Try to decode as UTF-8 text
       const text = buffer.toString("utf8");
-
-      console.log(`Text extraction from ${file.name}:`, {
-        bufferLength: buffer.length,
-        textLength: text.length,
-        preview: text.substring(0, 200),
-      });
 
       return text;
     } catch (error) {

@@ -65,12 +65,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process documents with LangChain
-    console.log(
-      "Processing files:",
-      files.map((f) => ({ name: f.name, type: f.type, size: f.size }))
-    );
-
     try {
       const result = await processor.processFiles(files, apiKey);
 
@@ -95,21 +89,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log(
-        "Processing successful, documents:",
-        result.documents.map((d: any) => ({
-          id: d.id,
-          name: d.name,
-          contentLength: d.content.length,
-          chunks: d.chunks.length,
-        }))
-      );
-
       // Store documents in vector database
       let storeResult;
       try {
         storeResult = await processor.storeDocuments(result.documents);
-        console.log("Vector store result:", storeResult);
       } catch (error) {
         console.warn("Failed to store in vector database:", error);
         // Continue without vector storage for now

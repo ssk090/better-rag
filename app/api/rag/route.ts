@@ -81,11 +81,6 @@ async function processWithAIStream(
       });
     }
 
-    console.log("Question:", question);
-    console.log("Sources count:", sources.length);
-    console.log("Context length:", context.length);
-    console.log("Context preview:", context.substring(0, 200));
-
     // Create OpenAI client
     const client = new OpenAI({
       apiKey,
@@ -134,7 +129,6 @@ Now answer the user's question: "${question}"`;
               controller.enqueue(encoder.encode(content));
             }
           }
-          console.log("Full AI response:", fullResponse);
           controller.close();
         } catch (error) {
           console.error("Streaming error:", error);
