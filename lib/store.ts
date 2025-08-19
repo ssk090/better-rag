@@ -9,7 +9,7 @@ import {
   YouTubeTranscript,
 } from "./types";
 import { isYouTubeUrl, isValidUrl } from "./utils";
-import { askQuestion, processDocuments, APIError } from "./api";
+import { askQuestion, processDocuments, processUrls, APIError } from "./api";
 import { extractYouTubeTranscript } from "./youtube-loader";
 
 interface RAGState {
@@ -22,6 +22,16 @@ interface RAGState {
   uploadedFiles: UploadedFile[];
   linkUrl: string;
   linkUrls: string[];
+  processedUrlDocuments: Array<{
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    processed: boolean;
+    chunks: number;
+    summary: string;
+    timestamp: string;
+  }>;
   youtubeUrl: string;
   youtubeUrls: string[];
   youtubeTranscripts: YouTubeTranscript[];
@@ -41,6 +51,18 @@ interface RAGState {
   setCurrentMessage: (message: string) => void;
   setInputType: (type: InputType) => void;
   setLinkUrl: (url: string) => void;
+  setProcessedUrlDocuments: (
+    documents: Array<{
+      id: string;
+      name: string;
+      type: string;
+      size: number;
+      processed: boolean;
+      chunks: number;
+      summary: string;
+      timestamp: string;
+    }>
+  ) => void;
   setYoutubeUrl: (url: string) => void;
   setShowToast: (show: boolean) => void;
   setToastMessage: (message: string) => void;
@@ -67,6 +89,7 @@ interface RAGState {
   // New API integration actions
   askQuestionWithAI: (question: string) => Promise<void>;
   processDocumentsWithAI: () => Promise<void>;
+  processUrlsWithAI: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   readFileAsBase64: (file: File) => Promise<string>;
@@ -92,6 +115,7 @@ export const useRAGStore = create<RAGState>()(
       uploadedFiles: [],
       linkUrl: "",
       linkUrls: [],
+      processedUrlDocuments: [],
       youtubeUrl: "",
       youtubeUrls: [],
       youtubeTranscripts: [],
@@ -131,6 +155,8 @@ export const useRAGStore = create<RAGState>()(
       setCurrentMessage: (message) => set({ currentMessage: message }),
       setInputType: (type) => set({ inputType: type }),
       setLinkUrl: (url) => set({ linkUrl: url }),
+      setProcessedUrlDocuments: (documents) =>
+        set({ processedUrlDocuments: documents }),
       setYoutubeUrl: (url) => set({ youtubeUrl: url }),
       setShowToast: (show) => set({ showToast: show }),
       setToastMessage: (message) => set({ toastMessage: message }),
@@ -605,7 +631,7 @@ export const useRAGStore = create<RAGState>()(
         });
       },
 
-      handleLinkKeyPress: (e) => {
+      handleLinkKeyPress: async (e) => {
         const { linkUrl, linkUrls } = get();
 
         if (e.key === "Enter" && linkUrl.trim()) {
@@ -613,29 +639,69 @@ export const useRAGStore = create<RAGState>()(
           const trimmedUrl = linkUrl.trim();
           if (isValidUrl(trimmedUrl)) {
             if (!linkUrls.includes(trimmedUrl)) {
+              // Add URL to the list first
               set({
                 linkUrls: [...linkUrls, trimmedUrl],
                 linkUrl: "",
+                loading: true,
+                error: null,
               });
 
-              const isYoutube = isYouTubeUrl(trimmedUrl);
-              const linkMessage: Message = {
-                id: Date.now().toString(),
-                content: `I've processed the ${
-                  isYoutube ? "YouTube video" : "website"
-                }: ${trimmedUrl}. I can now answer questions about this content.`,
-                isUser: false,
-                timestamp: new Date(),
-              };
+              try {
+                // Process the URL immediately
+                const apiKey =
+                  get().apiKeys.openai ||
+                  get().apiKeys.anthropic ||
+                  get().apiKeys.groq;
+                if (!apiKey) {
+                  throw new Error("No API key configured");
+                }
 
-              setTimeout(() => {
+                const response = await processUrls({
+                  urls: [trimmedUrl],
+                  apiKey,
+                  provider: "openai",
+                });
+
+                if (response.success && response.documents.length > 0) {
+                  const isYoutube = isYouTubeUrl(trimmedUrl);
+                  const linkMessage: Message = {
+                    id: Date.now().toString(),
+                    content: `I've successfully processed the ${
+                      isYoutube ? "YouTube video" : "website"
+                    }: ${trimmedUrl}. The content has been extracted and I can now answer questions about it.`,
+                    isUser: false,
+                    timestamp: new Date(),
+                  };
+
+                  set((state) => ({
+                    messages: [...state.messages, linkMessage],
+                    isDocumentSubmitted: true,
+                    loading: false,
+                    toastMessage: "URL processed successfully!",
+                    showToast: true,
+                    processedUrlDocuments: [
+                      ...state.processedUrlDocuments,
+                      ...response.documents,
+                    ],
+                  }));
+                } else {
+                  throw new Error("Failed to process URL content");
+                }
+              } catch (error) {
+                console.error("Error processing URL:", error);
+                const errorMessage =
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to process URL";
+
+                // Remove the failed URL from the list
                 set((state) => ({
-                  messages: [...state.messages, linkMessage],
-                  isDocumentSubmitted: true,
-                  toastMessage: "Link source added successfully!",
-                  showToast: true,
+                  linkUrls: state.linkUrls.filter((url) => url !== trimmedUrl),
+                  loading: false,
+                  error: errorMessage,
                 }));
-              }, 300);
+              }
             } else {
               set({ linkUrl: "" });
             }
@@ -646,6 +712,11 @@ export const useRAGStore = create<RAGState>()(
       removeLinkUrl: (index) => {
         set((state) => {
           const newLinkUrls = state.linkUrls.filter((_, i) => i !== index);
+          const removedUrl = state.linkUrls[index];
+          const newProcessedUrlDocuments = state.processedUrlDocuments.filter(
+            (doc) => doc.name !== removedUrl
+          );
+
           const hasRemainingSources =
             state.uploadedFiles.length > 0 ||
             newLinkUrls.length > 0 ||
@@ -654,6 +725,7 @@ export const useRAGStore = create<RAGState>()(
 
           return {
             linkUrls: newLinkUrls,
+            processedUrlDocuments: newProcessedUrlDocuments,
             isDocumentSubmitted: hasRemainingSources,
           };
         });
@@ -663,6 +735,7 @@ export const useRAGStore = create<RAGState>()(
         set({
           uploadedFiles: [],
           linkUrls: [],
+          processedUrlDocuments: [],
           youtubeUrls: [],
           youtubeTranscripts: [],
           documentText: "",
@@ -703,11 +776,11 @@ export const useRAGStore = create<RAGState>()(
               name: file.name,
               content: file.content,
             })),
-            ...linkUrls.map((url, index) => ({
-              id: `link-${index}`,
-              type: "link",
-              name: url,
-              content: url,
+            ...get().processedUrlDocuments.map((doc) => ({
+              id: doc.id,
+              type: "url",
+              name: doc.name,
+              content: doc.summary,
             })),
             ...youtubeTranscripts.map((transcript) => ({
               id: transcript.id,
@@ -802,6 +875,48 @@ export const useRAGStore = create<RAGState>()(
             error instanceof APIError
               ? error.message
               : "Failed to process documents";
+
+          set({
+            error: errorMessage,
+            loading: false,
+          });
+        }
+      },
+
+      processUrlsWithAI: async () => {
+        const { apiKeys, linkUrls } = get();
+
+        try {
+          set({ loading: true, error: null });
+
+          const apiKey = apiKeys.openai || apiKeys.anthropic || apiKeys.groq;
+          if (!apiKey) {
+            throw new Error("No API key configured");
+          }
+
+          if (linkUrls.length === 0) {
+            throw new Error("No URLs to process");
+          }
+
+          // Call the API
+          const response = await processUrls({
+            urls: linkUrls,
+            apiKey,
+            provider: "openai",
+          });
+
+          // Update the store with processed URLs
+          set({
+            linkUrls: response.documents.map((doc) => doc.name),
+            loading: false,
+            toastMessage: `Successfully processed ${response.documents.length} URLs!`,
+            showToast: true,
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof APIError
+              ? error.message
+              : "Failed to process URLs";
 
           set({
             error: errorMessage,

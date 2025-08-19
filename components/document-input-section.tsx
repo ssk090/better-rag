@@ -159,7 +159,7 @@ export function DocumentInputSection({
             {getTotalSources() > 0 && (
               <Button
                 variant="outline"
-                className="flex items-center gap-2 h-12 text-destructive hover:bg-destructive/10"
+                className="flex items-center gap-2 h-12 text-red-500 hover:bg-destructive/10"
                 onClick={onClearAllSources}
               >
                 Clear All

@@ -46,6 +46,27 @@ export interface DocumentProcessingResponse {
   timestamp: string;
 }
 
+export interface URLProcessingRequest {
+  urls: string[];
+  apiKey: string;
+  provider?: "openai" | "anthropic" | "groq";
+}
+
+export interface URLProcessingResponse {
+  success: boolean;
+  documents: Array<{
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    processed: boolean;
+    chunks: number;
+    summary: string;
+    timestamp: string;
+  }>;
+  timestamp: string;
+}
+
 export class APIError extends Error {
   constructor(message: string, public status: number, public response?: any) {
     super(message);
@@ -89,6 +110,39 @@ export async function processDocuments(
 ): Promise<DocumentProcessingResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/documents`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new APIError(
+        errorData.error || `HTTP error! status: ${response.status}`,
+        response.status,
+        errorData
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw error;
+    }
+    throw new APIError(
+      error instanceof Error ? error.message : "Unknown error occurred",
+      500
+    );
+  }
+}
+
+export async function processUrls(
+  request: URLProcessingRequest
+): Promise<URLProcessingResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/urls`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

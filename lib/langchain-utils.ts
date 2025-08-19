@@ -3,6 +3,8 @@ import { TextLoader } from "langchain/document_loaders/fs/text";
 import { CSVLoader } from "@langchain/community/document_loaders/fs/csv";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
 import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube";
+import { HTMLWebBaseLoader } from "@langchain/community/document_loaders/web/html";
+import { HtmlToTextTransformer } from "@langchain/community/document_transformers/html_to_text";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { QdrantVectorStore } from "@langchain/qdrant";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -397,6 +399,135 @@ export class LangChainProcessor {
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
+    }
+  }
+
+  // Process a URL and extract HTML content
+  async processUrl(url: string, apiKey: string): Promise<ProcessedDocument> {
+    try {
+      const urlId = `url-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
+      console.log(`Processing URL: ${url}`);
+
+      // Use HTMLWebBaseLoader to fetch and load the HTML content
+      const loader = new HTMLWebBaseLoader(url);
+      const htmlDocs = await loader.load();
+
+      if (!htmlDocs || htmlDocs.length === 0) {
+        throw new Error(`Failed to load content from URL: ${url}`);
+      }
+
+      console.log(`HTML loader returned ${htmlDocs.length} documents`);
+
+      // Use HtmlToTextTransformer to convert HTML to clean text
+      const transformer = new HtmlToTextTransformer();
+      const textDocs = await transformer.invoke(htmlDocs);
+
+      if (!textDocs || textDocs.length === 0) {
+        throw new Error(`Failed to transform HTML to text from URL: ${url}`);
+      }
+
+      console.log(`Text transformer returned ${textDocs.length} documents`);
+
+      // Combine all text content
+      const content = textDocs.map((doc) => doc.pageContent).join("\n\n");
+
+      if (!content || content.trim().length === 0) {
+        throw new Error(`No content extracted from URL: ${url}`);
+      }
+
+      console.log(`Extracted content length: ${content.length} characters`);
+
+      // Split the content into chunks
+      const chunks = await this.textSplitter.splitText(content);
+
+      // Create LangChain documents with proper metadata
+      const documents = chunks.map(
+        (chunk, index) =>
+          new Document({
+            pageContent: chunk,
+            metadata: {
+              source: url,
+              fileId: urlId,
+              chunkIndex: index,
+              fileType: "text/html",
+              timestamp: new Date().toISOString(),
+            },
+          })
+      );
+
+      // Generate summary
+      const summary = this.generateSummary(content, documents.length);
+
+      return {
+        id: urlId,
+        name: url,
+        type: "text/html",
+        size: content.length,
+        content,
+        chunks: documents,
+        processed: true,
+        summary,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to process URL ${url}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  // Process multiple URLs
+  async processUrls(
+    urls: string[],
+    apiKey: string
+  ): Promise<FileProcessingResult> {
+    try {
+      const processedDocuments: ProcessedDocument[] = [];
+      const failedUrls: string[] = [];
+
+      for (const url of urls) {
+        try {
+          const processed = await this.processUrl(url, apiKey);
+          processedDocuments.push(processed);
+        } catch (error) {
+          console.error(`Error processing URL ${url}:`, error);
+          failedUrls.push(
+            `${url}: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
+          );
+          // Continue with other URLs
+        }
+      }
+
+      if (processedDocuments.length === 0 && failedUrls.length > 0) {
+        return {
+          success: false,
+          documents: [],
+          error: `All URLs failed to process: ${failedUrls.join("; ")}`,
+        };
+      }
+
+      return {
+        success: true,
+        documents: processedDocuments,
+        error:
+          failedUrls.length > 0
+            ? `Some URLs failed: ${failedUrls.join("; ")}`
+            : undefined,
+      };
+    } catch (error) {
+      console.error("Critical error in processUrls:", error);
+      return {
+        success: false,
+        documents: [],
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 
