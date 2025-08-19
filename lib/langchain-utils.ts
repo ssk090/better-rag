@@ -300,6 +300,11 @@ export class LangChainProcessor {
         const loader = new DocxLoader(file);
         documents = await loader.load();
         content = documents.map((doc) => doc.pageContent).join("\n\n");
+      } else if (fileType.includes("doc")) {
+        // Use DocLoader
+        const loader = new DocxLoader(file, { type: "doc" });
+        documents = await loader.load();
+        content = documents.map((doc) => doc.pageContent).join("\n\n");
       } else {
         // Fallback to text extraction
         content = await this.extractTextFromFile(file);
