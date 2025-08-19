@@ -28,6 +28,23 @@ export interface ProcessedDocumentResult {
   content: string;
 }
 
+export interface YouTubeTranscript {
+  id: string;
+  url: string;
+  title?: string;
+  description?: string;
+  transcript: string;
+  metadata: {
+    language: string;
+    videoId: string;
+    duration?: number;
+    viewCount?: number;
+    uploadDate?: string;
+  };
+  processed: boolean;
+  timestamp: string;
+}
+
 export interface ApiKeys {
   openai: string;
   anthropic: string;

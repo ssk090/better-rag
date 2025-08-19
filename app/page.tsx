@@ -21,7 +21,7 @@ export default function RAGApplication() {
     linkUrl,
     linkUrls,
     youtubeUrl,
-    youtubeUrls,
+    youtubeTranscripts,
     showToast,
     toastMessage,
     apiKeys,
@@ -56,7 +56,7 @@ export default function RAGApplication() {
     handleSendMessage,
     handleKeyPress,
     handleYoutubeKeyPress,
-    removeYoutubeUrl,
+    removeYouTubeTranscript,
     handleLinkKeyPress,
     removeLinkUrl,
 
@@ -156,7 +156,7 @@ export default function RAGApplication() {
             linkUrl={linkUrl}
             linkUrls={linkUrls}
             youtubeUrl={youtubeUrl}
-            youtubeUrls={youtubeUrls}
+            youtubeTranscripts={youtubeTranscripts}
             sourceLimit={SOURCE_LIMIT}
             onInputTypeChange={setInputType}
             onDocumentTextChange={setDocumentText}
@@ -169,9 +169,10 @@ export default function RAGApplication() {
             onRemoveLink={removeLinkUrl}
             onYoutubeUrlChange={setYoutubeUrl}
             onYoutubeKeyPress={handleYoutubeKeyPress}
-            onRemoveYoutube={removeYoutubeUrl}
+            onRemoveTranscript={removeYouTubeTranscript}
             onDocumentSubmit={handleDocumentSubmit}
             onClearAllSources={clearAllSources}
+            loading={loading}
           />
 
           <div className="flex flex-col">

@@ -6,9 +6,11 @@ import {
   ApiKeys,
   InputType,
   ProcessedDocumentResult,
+  YouTubeTranscript,
 } from "./types";
 import { isYouTubeUrl, isValidUrl } from "./utils";
 import { askQuestion, processDocuments, APIError } from "./api";
+import { extractYouTubeTranscript } from "./youtube-loader";
 
 interface RAGState {
   // State
@@ -22,6 +24,7 @@ interface RAGState {
   linkUrls: string[];
   youtubeUrl: string;
   youtubeUrls: string[];
+  youtubeTranscripts: YouTubeTranscript[];
   showToast: boolean;
   toastMessage: string;
   apiKeys: ApiKeys;
@@ -43,6 +46,8 @@ interface RAGState {
   setToastMessage: (message: string) => void;
   setIsApiKeysDialogOpen: (open: boolean) => void;
   setTempApiKeys: (keys: ApiKeys) => void;
+  extractYouTubeTranscript: (url: string) => Promise<void>;
+  removeYouTubeTranscript: (id: string) => void;
 
   saveApiKeys: () => void;
   hasApiKeys: () => boolean;
@@ -89,6 +94,7 @@ export const useRAGStore = create<RAGState>()(
       linkUrls: [],
       youtubeUrl: "",
       youtubeUrls: [],
+      youtubeTranscripts: [],
       showToast: false,
       toastMessage: "",
       apiKeys: {
@@ -452,37 +458,34 @@ export const useRAGStore = create<RAGState>()(
         }
       },
 
-      handleYoutubeKeyPress: (e) => {
-        const { youtubeUrl, youtubeUrls } = get();
+      handleYoutubeKeyPress: async (e) => {
+        const { youtubeUrl, youtubeTranscripts } = get();
 
         if (e.key === "Enter" && youtubeUrl.trim()) {
           e.preventDefault();
           const trimmedUrl = youtubeUrl.trim();
           if (isYouTubeUrl(trimmedUrl)) {
-            if (!youtubeUrls.includes(trimmedUrl)) {
-              set({
-                youtubeUrls: [...youtubeUrls, trimmedUrl],
-                youtubeUrl: "",
-              });
+            // Check if transcript already exists
+            const existingTranscript = youtubeTranscripts.find(
+              (transcript) => transcript.url === trimmedUrl
+            );
 
-              const youtubeMessage: Message = {
-                id: Date.now().toString(),
-                content: `I've processed the YouTube video: ${trimmedUrl}. I can now answer questions about this video content.`,
-                isUser: false,
-                timestamp: new Date(),
-              };
-
-              setTimeout(() => {
-                set((state) => ({
-                  messages: [...state.messages, youtubeMessage],
-                  isDocumentSubmitted: true,
-                  toastMessage: "YouTube source added successfully!",
-                  showToast: true,
-                }));
-              }, 300);
+            if (!existingTranscript) {
+              // Extract transcript
+              await get().extractYouTubeTranscript(trimmedUrl);
             } else {
               set({ youtubeUrl: "" });
+              set({
+                toastMessage: "Transcript already exists for this video",
+                showToast: true,
+              });
             }
+          } else {
+            set({
+              error: "Invalid YouTube URL format",
+              toastMessage: "Invalid YouTube URL format",
+              showToast: true,
+            });
           }
         }
       },
@@ -496,10 +499,107 @@ export const useRAGStore = create<RAGState>()(
             state.uploadedFiles.length > 0 ||
             state.linkUrls.length > 0 ||
             newYoutubeUrls.length > 0 ||
+            state.youtubeTranscripts.length > 0 ||
             state.documentText.trim().length > 0;
 
           return {
             youtubeUrls: newYoutubeUrls,
+            isDocumentSubmitted: hasRemainingSources,
+          };
+        });
+      },
+
+      extractYouTubeTranscript: async (url) => {
+        try {
+          set({ loading: true, error: null });
+
+          const transcript = await extractYouTubeTranscript(url);
+
+          const youtubeTranscript: YouTubeTranscript = {
+            id: `youtube-${Date.now()}`,
+            url: transcript.url,
+            title: transcript.title,
+            description: transcript.description,
+            transcript: transcript.transcript,
+            metadata: transcript.metadata,
+            processed: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          set((state) => ({
+            youtubeTranscripts: [
+              ...state.youtubeTranscripts,
+              youtubeTranscript,
+            ],
+            loading: false,
+            toastMessage: "YouTube transcript extracted successfully!",
+            showToast: true,
+          }));
+
+          // Add a message to the chat
+          const transcriptMessage: Message = {
+            id: Date.now().toString(),
+            content: `I've extracted the transcript from: ${
+              transcript.title || url
+            }. The transcript contains ${
+              transcript.transcript.split(" ").length
+            } words. I can now answer questions about this video content.`,
+            isUser: false,
+            timestamp: new Date(),
+          };
+
+          setTimeout(() => {
+            set((state) => ({
+              messages: [...state.messages, transcriptMessage],
+              isDocumentSubmitted: true,
+            }));
+          }, 300);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Failed to extract transcript";
+
+          // Provide more user-friendly error messages
+          let userMessage = errorMessage;
+          if (
+            errorMessage.includes("Failed to get YouTube video transcription")
+          ) {
+            userMessage =
+              "This video doesn't have captions or they are disabled. Please try a different video.";
+          } else if (errorMessage.includes("Invalid YouTube URL")) {
+            userMessage = "Please enter a valid YouTube URL.";
+          } else if (errorMessage.includes("No transcript found")) {
+            userMessage =
+              "No transcript found for this video. Please try a different video.";
+          } else if (errorMessage.includes("fetch")) {
+            userMessage =
+              "Network error. Please check your connection and try again.";
+          }
+
+          set({
+            error: userMessage,
+            loading: false,
+            toastMessage: `Error: ${userMessage}`,
+            showToast: true,
+          });
+        }
+      },
+
+      removeYouTubeTranscript: (id) => {
+        set((state) => {
+          const newTranscripts = state.youtubeTranscripts.filter(
+            (transcript) => transcript.id !== id
+          );
+          const hasRemainingSources =
+            state.uploadedFiles.length > 0 ||
+            state.linkUrls.length > 0 ||
+            state.youtubeUrls.length > 0 ||
+            newTranscripts.length > 0 ||
+            state.documentText.trim().length > 0;
+
+          return {
+            youtubeTranscripts: newTranscripts,
             isDocumentSubmitted: hasRemainingSources,
           };
         });
@@ -564,6 +664,7 @@ export const useRAGStore = create<RAGState>()(
           uploadedFiles: [],
           linkUrls: [],
           youtubeUrls: [],
+          youtubeTranscripts: [],
           documentText: "",
           isDocumentSubmitted: false,
           messages: [],
@@ -576,8 +677,14 @@ export const useRAGStore = create<RAGState>()(
       setError: (error) => set({ error }),
 
       askQuestionWithAI: async (question: string) => {
-        const { apiKeys, uploadedFiles, linkUrls, youtubeUrls, documentText } =
-          get();
+        const {
+          apiKeys,
+          uploadedFiles,
+          linkUrls,
+          youtubeUrls,
+          youtubeTranscripts,
+          documentText,
+        } = get();
 
         try {
           set({ loading: true, error: null });
@@ -602,11 +709,11 @@ export const useRAGStore = create<RAGState>()(
               name: url,
               content: url,
             })),
-            ...youtubeUrls.map((url, index) => ({
-              id: `youtube-${index}`,
+            ...youtubeTranscripts.map((transcript) => ({
+              id: transcript.id,
               type: "youtube",
-              name: url,
-              content: url,
+              name: transcript.title || transcript.url,
+              content: transcript.transcript,
             })),
           ];
 

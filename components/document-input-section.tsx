@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, PlusIcon } from "lucide-react";
-import { InputType, UploadedFile } from "@/lib/types";
+import { InputType, UploadedFile, YouTubeTranscript } from "@/lib/types";
 import { FileUpload } from "./file-upload";
 import { LinkInput } from "./link-input";
 import { YouTubeInput } from "./youtube-input";
@@ -18,7 +18,7 @@ interface DocumentInputSectionProps {
   linkUrl: string;
   linkUrls: string[];
   youtubeUrl: string;
-  youtubeUrls: string[];
+  youtubeTranscripts: YouTubeTranscript[];
   sourceLimit: number;
   onInputTypeChange: (type: InputType) => void;
   onDocumentTextChange: (text: string) => void;
@@ -31,9 +31,10 @@ interface DocumentInputSectionProps {
   onRemoveLink: (index: number) => void;
   onYoutubeUrlChange: (url: string) => void;
   onYoutubeKeyPress: (e: React.KeyboardEvent) => void;
-  onRemoveYoutube: (index: number) => void;
+  onRemoveTranscript: (id: string) => void;
   onDocumentSubmit: () => void;
   onClearAllSources: () => void;
+  loading?: boolean;
 }
 
 export function DocumentInputSection({
@@ -43,7 +44,7 @@ export function DocumentInputSection({
   linkUrl,
   linkUrls,
   youtubeUrl,
-  youtubeUrls,
+  youtubeTranscripts,
   sourceLimit,
   onInputTypeChange,
   onDocumentTextChange,
@@ -56,15 +57,16 @@ export function DocumentInputSection({
   onRemoveLink,
   onYoutubeUrlChange,
   onYoutubeKeyPress,
-  onRemoveYoutube,
+  onRemoveTranscript,
   onDocumentSubmit,
   onClearAllSources,
+  loading,
 }: DocumentInputSectionProps) {
   const getTotalSources = () => {
     let total = 0;
     if (documentText.trim()) total += 1;
     total += linkUrls.length;
-    total += youtubeUrls.length;
+    total += youtubeTranscripts.length;
     total += uploadedFiles.length;
     return total;
   };
@@ -112,10 +114,11 @@ export function DocumentInputSection({
           {inputType === "youtube" && (
             <YouTubeInput
               youtubeUrl={youtubeUrl}
-              youtubeUrls={youtubeUrls}
+              youtubeTranscripts={youtubeTranscripts}
               onYoutubeUrlChange={onYoutubeUrlChange}
               onYoutubeKeyPress={onYoutubeKeyPress}
-              onRemoveYoutube={onRemoveYoutube}
+              onRemoveTranscript={onRemoveTranscript}
+              loading={loading}
             />
           )}
 
