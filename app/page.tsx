@@ -7,6 +7,7 @@ import { ChatInterface } from "@/components/chat-interface";
 import { useRAGStore } from "@/lib/store";
 import { X } from "lucide-react";
 import { Footer } from "@/components/footer";
+import { useEffect, useState } from "react";
 
 export default function RAGApplication() {
   const {
@@ -66,11 +67,36 @@ export default function RAGApplication() {
     setError,
   } = useRAGStore();
 
-  const hasApiKeysValue = hasApiKeys();
+  const [mounted, setMounted] = useState(false);
+  const [hasApiKeysValue, setHasApiKeysValue] = useState(false);
+  const [clientShowToast, setClientShowToast] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
+  const [clientLoading, setClientLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setHasApiKeysValue(hasApiKeys());
+    setClientShowToast(showToast);
+    setClientError(error);
+    setClientLoading(loading);
+  }, [hasApiKeys, showToast, error, loading]);
+
+  // Update client state when store state changes
+  useEffect(() => {
+    setClientShowToast(showToast);
+  }, [showToast]);
+
+  useEffect(() => {
+    setClientError(error);
+  }, [error]);
+
+  useEffect(() => {
+    setClientLoading(loading);
+  }, [loading]);
 
   return (
     <div className="min-h-screen bg-background">
-      {showToast && (
+      {mounted && clientShowToast && (
         <Toast
           message={toastMessage}
           type="success"
@@ -78,10 +104,10 @@ export default function RAGApplication() {
         />
       )}
 
-      {error && (
+      {mounted && clientError && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg shadow-lg">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{error}</span>
+            <span className="text-sm font-medium">{clientError}</span>
             <button
               onClick={() => setError(null)}
               className="text-red-600 hover:text-red-800"
@@ -92,7 +118,7 @@ export default function RAGApplication() {
         </div>
       )}
 
-      {loading && (
+      {mounted && clientLoading && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg shadow-lg">
           <div className="flex items-center gap-2">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>

@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Settings, Key } from "lucide-react";
 import { ApiKeys } from "@/lib/types";
+import { useEffect, useState } from "react";
 
 interface ApiKeysDialogProps {
   isOpen: boolean;
@@ -29,6 +30,12 @@ export function ApiKeysDialog({
   onSave,
   hasApiKeys,
 }: ApiKeysDialogProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -38,7 +45,9 @@ export function ApiKeysDialog({
         >
           <Settings className="h-4 w-4" />
           <span className="hidden sm:inline">API Keys</span>
-          {hasApiKeys && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+          {mounted && hasApiKeys && (
+            <div className="w-2 h-2 bg-green-500 rounded-full" />
+          )}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
