@@ -331,6 +331,7 @@ This project is open source and available under the MIT License.
 ## 🔗 Links
 
 - **Live Application**: [https://better-rag.vercel.app/](https://better-rag.vercel.app/)
+- **Youtube Demo**: [https://youtu.be/_ce8bKGmRDo](https://youtu.be/_ce8bKGmRDo)
 - **Built with**: Next.js, Tailwind CSS, shadcn/ui, LangChain
 - **AI Providers**: OpenAI, Anthropic, Groq
 - **Vector Database**: Qdrant
