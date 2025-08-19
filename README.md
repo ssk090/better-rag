@@ -9,6 +9,8 @@ A modern, user-friendly Retrieval-Augmented Generation (RAG) application that al
 
 **[https://better-rag.vercel.app/](https://better-rag.vercel.app/)**
 
+<img width="1571" height="1278" alt="image" src="https://github.com/user-attachments/assets/d9633e06-6d74-42fc-b950-50d3d667a9e9" />
+
 ## 📖 Overview
 
 Better RAG is a sophisticated web application that combines document processing with AI-powered question answering. It allows users to upload various types of documents, add web links, YouTube videos, or paste text content, and then interact with an AI that can answer questions based on these sources.
