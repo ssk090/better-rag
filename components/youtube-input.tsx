@@ -41,6 +41,9 @@ export function YouTubeInput({
           Press Enter to extract the video transcript. This may take a few
           moments.
         </p>
+        <p className="text-xs text-green-600 font-medium">
+          ✓ Transcripts are processed automatically when you press Enter
+        </p>
       </div>
 
       {youtubeTranscripts.length > 0 && (

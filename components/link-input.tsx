@@ -31,6 +31,9 @@ export function LinkInput({
           onKeyPress={onLinkKeyPress}
           className="w-full p-3 border rounded-lg bg-background"
         />
+        <p className="text-xs text-green-600 font-medium">
+          ✓ URLs are processed automatically when you press Enter
+        </p>
       </div>
 
       {linkUrls.length > 0 && (

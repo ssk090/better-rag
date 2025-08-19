@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createLangChainProcessor } from "@/lib/langchain-utils";
 import OpenAI from "openai";
 
@@ -9,48 +9,50 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     if (!question || !sources || sources.length === 0) {
-      return NextResponse.json(
-        { error: "Question and sources are required" },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: "Question and sources are required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
     // Check if API key is provided
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 401 }
-      );
+      return new Response(JSON.stringify({ error: "API key is required" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Simulate AI processing (replace with actual AI API calls)
-    const response = await processWithAI(question, sources, apiKey, provider);
+    // Create streaming response
+    const stream = await processWithAIStream(
+      question,
+      sources,
+      apiKey,
+      provider
+    );
 
-    return NextResponse.json({
-      success: true,
-      answer: response,
-      timestamp: new Date().toISOString(),
-      sources: sources.map((source: any) => ({
-        id: source.id,
-        type: source.type,
-        name: source.name,
-      })),
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     });
   } catch (error) {
     console.error("RAG API Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 
-async function processWithAI(
+async function processWithAIStream(
   question: string,
   sources: any[],
   apiKey: string,
   provider: string
-): Promise<string> {
+): Promise<ReadableStream> {
   try {
     // Create LangChain processor for vector search
     const processor = createLangChainProcessor(apiKey);
@@ -79,29 +81,35 @@ async function processWithAI(
       });
     }
 
+    console.log("Question:", question);
+    console.log("Sources count:", sources.length);
+    console.log("Context length:", context.length);
+    console.log("Context preview:", context.substring(0, 200));
+
     // Create OpenAI client
-    const openai = new OpenAI({
+    const client = new OpenAI({
       apiKey,
     });
 
     // System prompt for RAG
-    const SYSTEM_PROMPT = `You are a knowledgeable AI assistant that provides accurate, helpful responses based on the provided context.
+    const SYSTEM_PROMPT = `You are a helpful AI assistant that answers questions based on the provided context.
 
-IMPORTANT GUIDELINES:
-1. Base your answers ONLY on the context provided below
-2. If the question cannot be answered using the available context, clearly state: "I cannot answer this question based on the available context."
-3. Always cite the specific source or document section when providing information
-4. Be concise but thorough in your explanations
-5. If the context contains multiple relevant pieces of information, synthesize them coherently
-6. Maintain a helpful and professional tone
+Your task is to answer the user's question using ONLY the information provided in the context below. 
+
+IMPORTANT:
+- Answer the question directly and helpfully
+- Use the context information to provide accurate answers
+- Cite sources when possible
+- Be conversational and helpful
+- Do NOT repeat the user's question back to them
 
 CONTEXT INFORMATION:
 ${context}
 
-Remember: Only use the information provided in the context above. Do not rely on external knowledge or make assumptions.`;
+Now answer the user's question: "${question}"`;
 
-    // Get AI response
-    const response = await openai.chat.completions.create({
+    // Get AI response with streaming using the newer API
+    const stream = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -109,29 +117,43 @@ Remember: Only use the information provided in the context above. Do not rely on
       ],
       temperature: 0,
       max_tokens: 1000,
+      stream: true,
     });
 
-    const responseText = response.choices[0]?.message?.content;
+    // Use a more direct streaming approach
+    const encoder = new TextEncoder();
 
-    if (!responseText) {
-      throw new Error("No response from AI");
-    }
-
-    return responseText;
+    return new ReadableStream({
+      async start(controller) {
+        try {
+          let fullResponse = "";
+          for await (const event of stream) {
+            const content = event.choices[0]?.delta?.content;
+            if (content) {
+              fullResponse += content;
+              controller.enqueue(encoder.encode(content));
+            }
+          }
+          console.log("Full AI response:", fullResponse);
+          controller.close();
+        } catch (error) {
+          console.error("Streaming error:", error);
+          controller.error(error);
+        }
+      },
+    });
   } catch (error) {
     console.error("AI processing error:", error);
 
-    // Fallback to simple response if AI fails
-    const sourceTypes = sources.map((s) => s.type).join(", ");
-    const sourceCount = sources.length;
+    // Return error as stream
+    const encoder = new TextEncoder();
+    const errorMessage = `Error: I encountered an issue while processing your request. Please check your API key and try again.`;
 
-    return `Based on your ${sourceCount} source(s) (${sourceTypes}), here's what I found regarding your question: "${question}"
-
-I encountered an error while processing your request with AI. This could be due to:
-- API key issues
-- Network connectivity problems
-- Vector database connection issues
-
-Please check your API key and try again. For now, I can only provide this basic response based on your sources.`;
+    return new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(errorMessage));
+        controller.close();
+      },
+    });
   }
 }

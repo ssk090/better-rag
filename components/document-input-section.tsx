@@ -73,7 +73,6 @@ export function DocumentInputSection({
 
   const canSubmit = () => {
     if (inputType === "text") return documentText.trim();
-    if (inputType === "upload") return uploadedFiles.length > 0;
     return false;
   };
 
@@ -82,7 +81,7 @@ export function DocumentInputSection({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          Add sources
+          Add Sources
         </CardTitle>
         <p className="text-sm text-muted-foreground mt-2">
           Sources let the AI base its responses on the information that matters
@@ -131,7 +130,7 @@ export function DocumentInputSection({
         </div>
 
         <div className="space-y-4 mt-auto">
-          {(inputType === "upload" || inputType === "text") && (
+          {inputType === "text" && (
             <div className="flex items-center justify-between">
               <Button
                 onClick={onDocumentSubmit}
@@ -139,7 +138,7 @@ export function DocumentInputSection({
                 className="w-full"
               >
                 <PlusIcon className="h-4 w-4" />
-                Add sources
+                Add Sources
               </Button>
             </div>
           )}

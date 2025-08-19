@@ -51,8 +51,11 @@ export function FileUpload({
           </label>{" "}
           to upload
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground mb-2">
           Supported file types: {getSupportedFileExtensions().join(", ")}
+        </p>
+        <p className="text-xs text-green-600 font-medium">
+          ✓ Files are processed automatically after upload
         </p>
         <input
           type="file"

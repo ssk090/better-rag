@@ -180,6 +180,7 @@ export default function RAGApplication() {
               messages={messages}
               currentMessage={currentMessage}
               isDocumentSubmitted={isDocumentSubmitted}
+              loading={clientLoading}
               onCurrentMessageChange={setCurrentMessage}
               onSendMessage={handleSendMessage}
               onKeyPress={handleKeyPress}

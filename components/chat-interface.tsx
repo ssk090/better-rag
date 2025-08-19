@@ -14,6 +14,7 @@ interface ChatInterfaceProps {
   messages: Message[];
   currentMessage: string;
   isDocumentSubmitted: boolean;
+  loading: boolean;
   onCurrentMessageChange: (message: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -23,6 +24,7 @@ export function ChatInterface({
   messages,
   currentMessage,
   isDocumentSubmitted,
+  loading,
   onCurrentMessageChange,
   onSendMessage,
   onKeyPress,
@@ -84,7 +86,9 @@ export function ChatInterface({
                         : "bg-card border"
                     }`}
                   >
-                    <p className="text-sm break-words">{message.content}</p>
+                    <p className="text-sm break-words whitespace-pre-wrap">
+                      {message.content || ""}
+                    </p>
                     <p className="text-xs opacity-70 mt-1">
                       {message.timestamp.toLocaleTimeString()}
                     </p>

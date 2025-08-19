@@ -9,7 +9,7 @@ import {
   YouTubeTranscript,
 } from "./types";
 import { isYouTubeUrl, isValidUrl } from "./utils";
-import { askQuestion, processDocuments, processUrls, APIError } from "./api";
+import { processDocuments, processUrls, APIError } from "./api";
 import { extractYouTubeTranscript } from "./youtube-loader";
 
 interface RAGState {
@@ -140,16 +140,9 @@ export const useRAGStore = create<RAGState>()(
 
       // Actions
       setDocumentText: (text) => {
-        const state = get();
-        const hasRemainingSources =
-          state.uploadedFiles.length > 0 ||
-          state.linkUrls.length > 0 ||
-          state.youtubeUrls.length > 0 ||
-          text.trim().length > 0;
-
         set({
           documentText: text,
-          isDocumentSubmitted: hasRemainingSources,
+          // Don't enable chat interface just by setting text - wait for actual submission
         });
       },
       setCurrentMessage: (message) => set({ currentMessage: message }),
@@ -345,6 +338,7 @@ export const useRAGStore = create<RAGState>()(
             return processed ? { ...file, ...processed } : file;
           }),
           loading: false,
+          isDocumentSubmitted: true, // Enable chat interface after processing
           showToast: true,
           toastMessage: `Successfully processed ${result.documents.length} files`,
         }));
@@ -463,7 +457,7 @@ export const useRAGStore = create<RAGState>()(
 
         if (currentMessage.trim() && isDocumentSubmitted) {
           const userMessage: Message = {
-            id: Date.now().toString(),
+            id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             content: currentMessage,
             isUser: true,
             timestamp: new Date(),
@@ -759,6 +753,11 @@ export const useRAGStore = create<RAGState>()(
           documentText,
         } = get();
 
+        // Create a placeholder AI message for streaming
+        const aiMessageId = `ai-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+
         try {
           set({ loading: true, error: null });
 
@@ -803,29 +802,98 @@ export const useRAGStore = create<RAGState>()(
             throw new Error("No sources available");
           }
 
-          // Call the API
-          const response = await askQuestion({
-            question,
-            sources,
-            apiKey,
-            provider: "openai", // You can make this configurable
-          });
+          // Set loading to true first to trigger typing indicator
+          set({ loading: true });
 
-          // Add the AI response to messages
+          // Create the AI message
           const aiMessage: Message = {
-            id: Date.now().toString(),
-            content: response.answer,
+            id: aiMessageId,
+            content: "",
             isUser: false,
             timestamp: new Date(),
           };
 
+          // Add the placeholder message immediately
           set((state) => ({
             messages: [...state.messages, aiMessage],
-            loading: false,
           }));
+
+          // Call the streaming API
+          const response = await fetch("/api/rag", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              question,
+              sources,
+              apiKey,
+              provider: "openai",
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Failed to get AI response: ${response.statusText}`;
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.error || errorMessage;
+            } catch {
+              // If we can't parse JSON, use the text as is
+            }
+            throw new Error(errorMessage);
+          }
+
+          if (!response.body) {
+            throw new Error("No response body");
+          }
+
+          // Read the streaming response
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let accumulatedContent = "";
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value, { stream: true });
+              accumulatedContent += chunk;
+
+              // Update the message content in real-time
+              set((state) => ({
+                messages: state.messages.map((msg) =>
+                  msg.id === aiMessageId
+                    ? { ...msg, content: accumulatedContent }
+                    : msg
+                ),
+              }));
+            }
+          } catch (streamError) {
+            console.error("Streaming error:", streamError);
+            // Update the message with error content
+            set((state) => ({
+              messages: state.messages.map((msg) =>
+                msg.id === aiMessageId
+                  ? {
+                      ...msg,
+                      content:
+                        accumulatedContent +
+                        "\n\n[Error: Streaming was interrupted]",
+                    }
+                  : msg
+              ),
+            }));
+            throw streamError;
+          } finally {
+            reader.releaseLock();
+            // Set loading to false when streaming completes
+            set({ loading: false });
+          }
         } catch (error) {
           const errorMessage =
-            error instanceof APIError
+            error instanceof Error
               ? error.message
               : "Failed to get AI response";
 
@@ -833,6 +901,11 @@ export const useRAGStore = create<RAGState>()(
             error: errorMessage,
             loading: false,
           });
+
+          // Remove the failed AI message specifically
+          set((state) => ({
+            messages: state.messages.filter((msg) => msg.id !== aiMessageId),
+          }));
         }
       },
 
