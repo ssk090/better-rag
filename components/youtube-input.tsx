@@ -52,7 +52,7 @@ export function YouTubeInput({
             {youtubeTranscripts.map((transcript) => (
               <div
                 key={transcript.id}
-                className="flex flex-col gap-3 p-4 border rounded-lg bg-card"
+                className="flex flex-col gap-3 p-4 border rounded-lg bg-background"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
@@ -100,10 +100,10 @@ export function YouTubeInput({
                   </div>
 
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => onRemoveTranscript(transcript.id)}
-                    className="h-8 w-8 p-0 hover:bg-destructive/10 flex-shrink-0"
+                    className="h-8 w-8 p-0 hover:bg-destructive/20 flex-shrink-0"
                   >
                     <X className="h-4 w-4" />
                   </Button>

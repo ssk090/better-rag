@@ -46,7 +46,7 @@ export function ApiKeysDialog({
           <Settings className="h-4 w-4" />
           <span className="hidden sm:inline">API Keys</span>
           {mounted && hasApiKeys && (
-            <div className="w-2 h-2 bg-green-500 rounded-full" />
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           )}
         </Button>
       </DialogTrigger>

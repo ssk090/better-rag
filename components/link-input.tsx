@@ -42,7 +42,7 @@ export function LinkInput({
             {linkUrls.map((url, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 border rounded-lg bg-card"
+                className="flex items-center gap-3 p-3 border rounded-lg bg-background"
               >
                 {isYouTubeUrl(url) ? (
                   <Youtube className="h-4 w-4 text-red-500" />
@@ -63,10 +63,10 @@ export function LinkInput({
                   </p>
                 </div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => onRemoveLink(index)}
-                  className="h-8 w-8 p-0 hover:bg-destructive/10"
+                  className="h-8 w-8 p-0 hover:bg-destructive/20"
                 >
                   <X className="h-4 w-4" />
                 </Button>
