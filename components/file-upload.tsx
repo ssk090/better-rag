@@ -2,9 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, FileText, File, X } from "lucide-react";
+import { Upload, FileText, File, X, CheckCircle } from "lucide-react";
 import { UploadedFile } from "@/lib/types";
 import { formatFileSize } from "@/lib/utils";
+import { getSupportedFileExtensions } from "@/lib/client-utils";
 
 interface FileUploadProps {
   uploadedFiles: UploadedFile[];
@@ -51,7 +52,7 @@ export function FileUpload({
           to upload
         </p>
         <p className="text-xs text-muted-foreground">
-          Supported file types: PDF, .txt, Markdown, CSV, and more
+          Supported file types: {getSupportedFileExtensions().join(", ")}
         </p>
         <input
           type="file"
@@ -59,7 +60,9 @@ export function FileUpload({
           onChange={onFileUpload}
           className="hidden"
           id="file-upload"
-          accept=".pdf,.txt,.md,.csv,.doc,.docx"
+          accept={getSupportedFileExtensions()
+            .map((ext) => (ext.startsWith(".") ? ext : `.${ext}`))
+            .join(",")}
         />
       </div>
 
@@ -69,20 +72,36 @@ export function FileUpload({
             {uploadedFiles.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center gap-3 p-3 border rounded-lg bg-card"
+                className={`flex items-center gap-3 p-3 border rounded-lg ${
+                  file.processed ? "bg-background" : "bg-card"
+                }`}
               >
-                {getFileIcon(file.type)}
+                {file.processed ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  getFileIcon(file.type)
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatFileSize(file.size)}
+                    {file.processed && file.chunks && (
+                      <span className="ml-2 text-green-600">
+                        • {file.chunks} chunks processed
+                      </span>
+                    )}
                   </p>
+                  {file.summary && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {file.summary}
+                    </p>
+                  )}
                 </div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => onRemoveFile(file.id)}
-                  className="h-8 w-8 p-0 hover:bg-destructive/10"
+                  className="h-8 w-8 p-0 hover:bg-destructive/20"
                 >
                   <X className="h-4 w-4" />
                 </Button>

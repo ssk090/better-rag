@@ -27,7 +27,7 @@ export function YouTubeInput({
           placeholder="Enter YouTube URL and press Enter..."
           value={youtubeUrl}
           onChange={(e) => onYoutubeUrlChange(e.target.value)}
-          onKeyPress={onYoutubeKeyPress}
+          onKeyDown={onYoutubeKeyPress}
           className="w-full p-3 border rounded-lg bg-background"
         />
       </div>

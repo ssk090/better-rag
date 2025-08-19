@@ -45,7 +45,7 @@ export function ApiKeysDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
-            Configure API Keys
+            BYOK (Bring Your Own Keys)
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
             Enter your API keys to enable AI-powered responses. Keys are stored

@@ -11,6 +11,21 @@ export interface UploadedFile {
   size: number;
   type: string;
   content?: string;
+  processed?: boolean;
+  chunks?: number;
+  summary?: string;
+}
+
+export interface ProcessedDocumentResult {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  processed: boolean;
+  chunks: number;
+  summary: string;
+  timestamp: string;
+  content: string;
 }
 
 export interface ApiKeys {

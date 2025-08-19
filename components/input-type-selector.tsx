@@ -16,6 +16,14 @@ export function InputTypeSelector({
   return (
     <div className="grid grid-cols-4 gap-2">
       <Button
+        variant={inputType === "upload" ? "default" : "outline"}
+        onClick={() => onInputTypeChange("upload")}
+        className="flex items-center gap-2 h-12"
+      >
+        <Upload className="h-4 w-4" />
+        <span className="hidden sm:inline">Upload</span>
+      </Button>
+      <Button
         variant={inputType === "link" ? "default" : "outline"}
         onClick={() => onInputTypeChange("link")}
         className="flex items-center gap-2 h-12"
@@ -38,14 +46,6 @@ export function InputTypeSelector({
       >
         <Copy className="h-4 w-4" />
         <span className="hidden sm:inline">Paste text</span>
-      </Button>
-      <Button
-        variant={inputType === "upload" ? "default" : "outline"}
-        onClick={() => onInputTypeChange("upload")}
-        className="flex items-center gap-2 h-12"
-      >
-        <Upload className="h-4 w-4" />
-        <span className="hidden sm:inline">Upload</span>
       </Button>
     </div>
   );

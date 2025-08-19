@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageCircle, Bot, User, Send } from "lucide-react";
 import { Message } from "@/lib/types";
+import { Input } from "./ui/input";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -32,10 +33,13 @@ export function ChatInterface({
           <MessageCircle className="h-5 w-5" />
           Chat Interface
         </CardTitle>
+        <p className="text-sm text-muted-foreground mt-2">
+          Ask questions about your sources to get answers.
+        </p>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
-        <ScrollArea className="flex-1 mb-4 h-[300px]">
-          <div className="space-y-4 pr-4">
+        <ScrollArea className="h-[calc(100vh-400px)] mb-4">
+          <div className="space-y-4 pr-4 pb-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 {isDocumentSubmitted
@@ -51,7 +55,7 @@ export function ChatInterface({
                   }`}
                 >
                   {!message.isUser && (
-                    <Avatar className="h-8 w-8 mt-1">
+                    <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
                       <AvatarFallback className="bg-accent text-accent-foreground">
                         <Bot className="h-4 w-4" />
                       </AvatarFallback>
@@ -65,14 +69,14 @@ export function ChatInterface({
                         : "bg-card border"
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm break-words">{message.content}</p>
                     <p className="text-xs opacity-70 mt-1">
                       {message.timestamp.toLocaleTimeString()}
                     </p>
                   </div>
 
                   {message.isUser && (
-                    <Avatar className="h-8 w-8 mt-1">
+                    <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
                       <AvatarFallback className="bg-secondary text-secondary-foreground">
                         <User className="h-4 w-4" />
                       </AvatarFallback>
@@ -85,7 +89,7 @@ export function ChatInterface({
         </ScrollArea>
 
         <div className="flex gap-2">
-          <Textarea
+          <Input
             placeholder={
               isDocumentSubmitted
                 ? "Ask a question about your sources..."
@@ -93,7 +97,7 @@ export function ChatInterface({
             }
             value={currentMessage}
             onChange={(e) => onCurrentMessageChange(e.target.value)}
-            onKeyPress={onKeyPress}
+            onKeyDown={onKeyPress}
             disabled={!isDocumentSubmitted}
             className="flex-1 min-h-[60px] max-h-[120px]"
           />

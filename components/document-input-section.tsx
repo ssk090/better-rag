@@ -33,6 +33,7 @@ interface DocumentInputSectionProps {
   onYoutubeKeyPress: (e: React.KeyboardEvent) => void;
   onRemoveYoutube: (index: number) => void;
   onDocumentSubmit: () => void;
+  onClearAllSources: () => void;
 }
 
 export function DocumentInputSection({
@@ -57,6 +58,7 @@ export function DocumentInputSection({
   onYoutubeKeyPress,
   onRemoveYoutube,
   onDocumentSubmit,
+  onClearAllSources,
 }: DocumentInputSectionProps) {
   const getTotalSources = () => {
     let total = 0;
@@ -127,13 +129,15 @@ export function DocumentInputSection({
 
         <div className="space-y-4 mt-auto">
           {(inputType === "upload" || inputType === "text") && (
-            <Button
-              onClick={onDocumentSubmit}
-              disabled={!canSubmit()}
-              className="w-full"
-            >
-              Add sources
-            </Button>
+            <div className="flex items-center justify-between">
+              <Button
+                onClick={onDocumentSubmit}
+                disabled={!canSubmit()}
+                className="w-full"
+              >
+                Add sources
+              </Button>
+            </div>
           )}
 
           <InputTypeSelector
@@ -141,10 +145,23 @@ export function DocumentInputSection({
             onInputTypeChange={onInputTypeChange}
           />
 
-          <SourceCounter
-            totalSources={getTotalSources()}
-            sourceLimit={sourceLimit}
-          />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <SourceCounter
+                totalSources={getTotalSources()}
+                sourceLimit={sourceLimit}
+              />
+            </div>
+            {getTotalSources() > 0 && (
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 h-12 text-destructive hover:bg-destructive/10"
+                onClick={onClearAllSources}
+              >
+                Clear All
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

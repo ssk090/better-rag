@@ -4,7 +4,8 @@ import { Toast } from "@/components/ui/toast";
 import { ApiKeysDialog } from "@/components/api-keys-dialog";
 import { DocumentInputSection } from "@/components/document-input-section";
 import { ChatInterface } from "@/components/chat-interface";
-import { useRAGApp } from "@/hooks/use-rag-app";
+import { useRAGStore } from "@/lib/store";
+import { X } from "lucide-react";
 
 export default function RAGApplication() {
   const {
@@ -26,6 +27,10 @@ export default function RAGApplication() {
     tempApiKeys,
     SOURCE_LIMIT,
 
+    // New state properties
+    loading,
+    error,
+
     // Setters
     setDocumentText,
     setCurrentMessage,
@@ -45,13 +50,20 @@ export default function RAGApplication() {
     handleDragOver,
     handleDrop,
     removeFile,
+    clearAllSources,
     handleSendMessage,
     handleKeyPress,
     handleYoutubeKeyPress,
     removeYoutubeUrl,
     handleLinkKeyPress,
     removeLinkUrl,
-  } = useRAGApp();
+
+    // New AI functions
+    askQuestionWithAI,
+    processDocumentsWithAI,
+    setLoading,
+    setError,
+  } = useRAGStore();
 
   const hasApiKeysValue = hasApiKeys();
 
@@ -65,11 +77,34 @@ export default function RAGApplication() {
         />
       )}
 
+      {error && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-600 hover:text-red-800"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span className="text-sm font-medium">Processing with AI...</span>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto p-4 h-screen">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">
-              RAG Application
+              Better RAG
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
               Add sources and start asking questions
@@ -109,6 +144,7 @@ export default function RAGApplication() {
             onYoutubeKeyPress={handleYoutubeKeyPress}
             onRemoveYoutube={removeYoutubeUrl}
             onDocumentSubmit={handleDocumentSubmit}
+            onClearAllSources={clearAllSources}
           />
 
           <ChatInterface
