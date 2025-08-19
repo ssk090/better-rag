@@ -67,7 +67,7 @@ export function FileUpload({
       </div>
 
       {uploadedFiles.length > 0 && (
-        <ScrollArea className="h-[200px]">
+        <ScrollArea className="h-[calc(60vh-200px)]">
           <div className="space-y-2">
             {uploadedFiles.map((file) => (
               <div

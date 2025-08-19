@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { FileText, PlusIcon } from "lucide-react";
 import { InputType, UploadedFile } from "@/lib/types";
 import { FileUpload } from "./file-upload";
 import { LinkInput } from "./link-input";
@@ -135,6 +135,7 @@ export function DocumentInputSection({
                 disabled={!canSubmit()}
                 className="w-full"
               >
+                <PlusIcon className="h-4 w-4" />
                 Add sources
               </Button>
             </div>

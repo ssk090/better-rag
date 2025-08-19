@@ -106,11 +106,195 @@ export class LangChainProcessor {
         documents = await loader.load();
         content = documents.map((doc) => doc.pageContent).join("\n\n");
       } else if (fileType === "text/plain" || fileType === "text/csv") {
-        // Use TextLoader or CSVLoader
-        const loader =
-          fileType === "text/csv" ? new CSVLoader(file) : new TextLoader(file);
-        documents = await loader.load();
-        content = documents.map((doc) => doc.pageContent).join("\n\n");
+        // Use TextLoader or CSVLoader with proper configuration
+        if (fileType === "text/csv") {
+          try {
+            console.log("Processing CSV file:", file.name, "Size:", file.size);
+
+            // First check if file has content by reading it as text
+            const fileContent = await this.extractTextFromFile(file);
+            console.log("Raw file content check:", {
+              contentLength: fileContent.length,
+              preview: fileContent.substring(0, 300),
+              hasContent: fileContent.trim().length > 0,
+            });
+
+            if (!fileContent || fileContent.trim().length === 0) {
+              console.warn(
+                "CSV file appears to be empty, creating empty document"
+              );
+              content = "";
+              documents = [
+                new Document({
+                  pageContent: "Empty CSV file",
+                  metadata: {
+                    source: file.name,
+                    fileId,
+                    chunkIndex: 0,
+                    fileType,
+                    timestamp: new Date().toISOString(),
+                  },
+                }),
+              ];
+            } else {
+              // Try CSVLoader first with proper configuration
+              try {
+                console.log("Attempting to use CSVLoader...");
+                const loader = new CSVLoader(file);
+                documents = await loader.load();
+                content = documents.map((doc) => doc.pageContent).join("\n\n");
+
+                console.log("CSVLoader result:", {
+                  documentCount: documents.length,
+                  contentLength: content.length,
+                  firstDocument: documents[0]?.pageContent?.substring(0, 100),
+                });
+
+                // If CSV loading resulted in empty content, fall back to text extraction
+                if (!content || content.trim().length === 0) {
+                  console.warn(
+                    "CSVLoader returned empty content, falling back to text extraction"
+                  );
+                  content = fileContent; // Use the already extracted content
+                  console.log("Using text extraction result:", {
+                    contentLength: content.length,
+                    preview: content.substring(0, 200),
+                  });
+                  // Create a single document from the text content
+                  documents = [
+                    new Document({
+                      pageContent: content,
+                      metadata: {
+                        source: file.name,
+                        fileId,
+                        chunkIndex: 0,
+                        fileType,
+                        timestamp: new Date().toISOString(),
+                      },
+                    }),
+                  ];
+                }
+              } catch (loaderError) {
+                console.warn(
+                  "CSVLoader failed, using manual CSV parsing:",
+                  loaderError
+                );
+                // Manual CSV parsing as fallback
+                try {
+                  const lines = fileContent
+                    .split("\n")
+                    .filter((line) => line.trim().length > 0);
+                  console.log(
+                    `Manual parsing: Found ${lines.length} non-empty lines`
+                  );
+
+                  if (lines.length > 0) {
+                    // Parse headers - handle quoted values properly
+                    const headerLine = lines[0];
+                    console.log(`Header line: "${headerLine}"`);
+
+                    // Simple CSV parsing that handles basic cases
+                    const headers = this.parseCSVLine(headerLine);
+                    console.log(`Parsed headers:`, headers);
+
+                    if (headers.length > 0) {
+                      // Parse data rows
+                      const rows = lines.slice(1).map((line, index) => {
+                        const values = this.parseCSVLine(line);
+                        return headers
+                          .map(
+                            (header: string, colIndex: number) =>
+                              `${header}: ${values[colIndex] || ""}`
+                          )
+                          .join(", ");
+                      });
+
+                      content = rows.join("\n");
+                      console.log(`Parsed ${rows.length} data rows`);
+                    } else {
+                      // If headers couldn't be parsed, treat as plain text
+                      console.warn(
+                        "Could not parse CSV headers, treating as plain text"
+                      );
+                      content = fileContent;
+                    }
+                  } else {
+                    // No non-empty lines found
+                    console.warn("No non-empty lines found in CSV");
+                    content = fileContent;
+                  }
+
+                  // Create document from parsed content
+                  documents = [
+                    new Document({
+                      pageContent: content,
+                      metadata: {
+                        source: file.name,
+                        fileId,
+                        chunkIndex: 0,
+                        fileType,
+                        timestamp: new Date().toISOString(),
+                      },
+                    }),
+                  ];
+
+                  console.log("Manual CSV parsing result:", {
+                    contentLength: content.length,
+                    preview: content.substring(0, 200),
+                  });
+                } catch (parseError) {
+                  console.warn(
+                    "Manual CSV parsing also failed, using raw content:",
+                    parseError
+                  );
+                  // Final fallback: use raw content
+                  content = fileContent;
+                  documents = [
+                    new Document({
+                      pageContent: content,
+                      metadata: {
+                        source: file.name,
+                        fileId,
+                        chunkIndex: 0,
+                        fileType,
+                        timestamp: new Date().toISOString(),
+                      },
+                    }),
+                  ];
+                }
+              }
+            }
+          } catch (csvError) {
+            console.warn(
+              "CSVLoader failed, falling back to text extraction:",
+              csvError
+            );
+            // Fallback to text extraction if CSV loading fails
+            content = await this.extractTextFromFile(file);
+            console.log("Text extraction fallback result:", {
+              contentLength: content.length,
+              preview: content.substring(0, 200),
+            });
+            // Create a single document from the text content
+            documents = [
+              new Document({
+                pageContent: content,
+                metadata: {
+                  source: file.name,
+                  fileId,
+                  chunkIndex: 0,
+                  fileType,
+                  timestamp: new Date().toISOString(),
+                },
+              }),
+            ];
+          }
+        } else {
+          // Use TextLoader for plain text files
+          const loader = new TextLoader(file);
+          documents = await loader.load();
+          content = documents.map((doc) => doc.pageContent).join("\n\n");
+        }
       } else if (fileType.includes("word") || fileType.includes("docx")) {
         // Use DocxLoader
         const loader = new DocxLoader(file);
@@ -159,6 +343,34 @@ export class LangChainProcessor {
         );
       }
 
+      // Final validation - ensure we have content
+      if (!content || content.trim().length === 0) {
+        console.warn(
+          `File ${file.name} has no content after processing, creating placeholder`
+        );
+        content = `Empty or unreadable file: ${file.name}`;
+        if (documents.length === 0) {
+          documents = [
+            new Document({
+              pageContent: content,
+              metadata: {
+                source: file.name,
+                fileId,
+                chunkIndex: 0,
+                fileType,
+                timestamp: new Date().toISOString(),
+              },
+            }),
+          ];
+        }
+      }
+
+      console.log(`Final processing result for ${file.name}:`, {
+        contentLength: content.length,
+        documentCount: documents.length,
+        hasContent: content.trim().length > 0,
+      });
+
       // Generate summary
       const summary = this.generateSummary(content, documents.length);
 
@@ -189,23 +401,40 @@ export class LangChainProcessor {
   ): Promise<FileProcessingResult> {
     try {
       const processedDocuments: ProcessedDocument[] = [];
+      const failedFiles: string[] = [];
 
       for (const file of files) {
         try {
           const processed = await this.processFile(file, apiKey);
-          console.log("processed", processed);
           processedDocuments.push(processed);
         } catch (error) {
           console.error(`Error processing file ${file.name}:`, error);
+          failedFiles.push(
+            `${file.name}: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
+          );
           // Continue with other files
         }
+      }
+      if (processedDocuments.length === 0 && failedFiles.length > 0) {
+        return {
+          success: false,
+          documents: [],
+          error: `All files failed to process: ${failedFiles.join("; ")}`,
+        };
       }
 
       return {
         success: true,
         documents: processedDocuments,
+        error:
+          failedFiles.length > 0
+            ? `Some files failed: ${failedFiles.join("; ")}`
+            : undefined,
       };
     } catch (error) {
+      console.error("Critical error in processFiles:", error);
       return {
         success: false,
         documents: [],
@@ -305,18 +534,32 @@ export class LangChainProcessor {
 
   // Extract text content from different file types (fallback method)
   private async extractTextFromFile(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          resolve(reader.result);
-        } else {
-          reject(new Error("Failed to read file as text"));
-        }
-      };
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsText(file);
-    });
+    // For server-side processing, we need to handle the file differently
+    // since FileReader is not available in Node.js
+
+    try {
+      // Convert File to Buffer/ArrayBuffer for server-side processing
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Try to decode as UTF-8 text
+      const text = buffer.toString("utf8");
+
+      console.log(`Text extraction from ${file.name}:`, {
+        bufferLength: buffer.length,
+        textLength: text.length,
+        preview: text.substring(0, 200),
+      });
+
+      return text;
+    } catch (error) {
+      console.error(`Error extracting text from ${file.name}:`, error);
+      throw new Error(
+        `Failed to read file content: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
   }
 
   // Generate a summary of the document
@@ -325,6 +568,31 @@ export class LangChainProcessor {
     const charCount = content.length;
 
     return `Document processed successfully. Contains ${wordCount} words, ${charCount} characters, split into ${chunkCount} chunks for optimal AI processing.`;
+  }
+
+  // Parse a CSV line, handling quoted values
+  private parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+
+    // Add the last field
+    result.push(current.trim());
+
+    return result;
   }
 }
 
