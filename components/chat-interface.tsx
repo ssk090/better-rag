@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageCircle, Bot, User, Send } from "lucide-react";
 import { Message } from "@/lib/types";
 import { Input } from "./ui/input";
+import { useEffect, useRef } from "react";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -26,6 +27,20 @@ export function ChatInterface({
   onSendMessage,
   onKeyPress,
 }: ChatInterfaceProps) {
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollElement = scrollAreaRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      );
+      if (scrollElement) {
+        scrollElement.scrollTop = scrollElement.scrollHeight;
+      }
+    }
+  }, [messages]);
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -38,7 +53,7 @@ export function ChatInterface({
         </p>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
-        <ScrollArea className="h-[calc(100vh-400px)] mb-4">
+        <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-400px)] mb-4">
           <div className="space-y-4 pr-4 pb-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8 italic">
