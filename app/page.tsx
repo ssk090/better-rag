@@ -356,7 +356,7 @@ export default function RAGApplication() {
             <DialogTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2 bg-transparent">
                 <Settings className="h-4 w-4" />
-                API Keys
+                <span className="hidden sm:inline">API Keys</span>
                 {hasApiKeys() && <div className="w-2 h-2 bg-green-500 rounded-full" />}
               </Button>
             </DialogTrigger>
@@ -618,7 +618,7 @@ export default function RAGApplication() {
                     className="flex items-center gap-2 h-12"
                   >
                     <Link className="h-4 w-4" />
-                    Link
+                    <span className="hidden sm:inline">Link</span>
                   </Button>
                   <Button
                     variant={inputType === "youtube" ? "default" : "outline"}
@@ -626,7 +626,7 @@ export default function RAGApplication() {
                     className="flex items-center gap-2 h-12"
                   >
                     <Youtube className="h-4 w-4" />
-                    YouTube
+                    <span className="hidden sm:inline">YouTube</span>
                   </Button>
                   <Button
                     variant={inputType === "text" ? "default" : "outline"}
@@ -634,7 +634,7 @@ export default function RAGApplication() {
                     className="flex items-center gap-2 h-12"
                   >
                     <Copy className="h-4 w-4" />
-                    Paste text
+                    <span className="hidden sm:inline">Paste text</span>
                   </Button>
                   <Button
                     variant={inputType === "upload" ? "default" : "outline"}
@@ -642,7 +642,7 @@ export default function RAGApplication() {
                     className="flex items-center gap-2 h-12"
                   >
                     <Upload className="h-4 w-4" />
-                    Upload
+                    <span className="hidden sm:inline">Upload</span>
                   </Button>
                 </div>
 
