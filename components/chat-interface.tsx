@@ -41,7 +41,7 @@ export function ChatInterface({
         <ScrollArea className="h-[calc(100vh-400px)] mb-4">
           <div className="space-y-4 pr-4 pb-4">
             {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
+              <div className="text-center text-muted-foreground py-8 italic">
                 {isDocumentSubmitted
                   ? "Start asking questions about your sources..."
                   : "Please add sources first to begin chatting"}
