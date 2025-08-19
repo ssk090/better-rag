@@ -10,6 +10,7 @@ import { YouTubeInput } from "./youtube-input";
 import { TextInput } from "./text-input";
 import { InputTypeSelector } from "./input-type-selector";
 import { SourceCounter } from "./source-counter";
+import { motion } from "motion/react";
 
 interface DocumentInputSectionProps {
   inputType: InputType;
@@ -77,96 +78,102 @@ export function DocumentInputSection({
   };
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Add Sources
-        </CardTitle>
-        <p className="text-sm text-muted-foreground mt-2">
-          Sources let the AI base its responses on the information that matters
-          most to you.
-        </p>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col">
-        <div className="flex-1 flex flex-col">
-          {inputType === "upload" && (
-            <FileUpload
-              uploadedFiles={uploadedFiles}
-              onFileUpload={onFileUpload}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-              onRemoveFile={onRemoveFile}
-            />
-          )}
-
-          {inputType === "link" && (
-            <LinkInput
-              linkUrl={linkUrl}
-              linkUrls={linkUrls}
-              onLinkUrlChange={onLinkUrlChange}
-              onLinkKeyPress={onLinkKeyPress}
-              onRemoveLink={onRemoveLink}
-            />
-          )}
-
-          {inputType === "youtube" && (
-            <YouTubeInput
-              youtubeUrl={youtubeUrl}
-              youtubeTranscripts={youtubeTranscripts}
-              onYoutubeUrlChange={onYoutubeUrlChange}
-              onYoutubeKeyPress={onYoutubeKeyPress}
-              onRemoveTranscript={onRemoveTranscript}
-              loading={loading}
-            />
-          )}
-
-          {inputType === "text" && (
-            <TextInput
-              documentText={documentText}
-              onDocumentTextChange={onDocumentTextChange}
-            />
-          )}
-        </div>
-
-        <div className="space-y-4 mt-auto">
-          {inputType === "text" && (
-            <div className="flex items-center justify-between">
-              <Button
-                onClick={onDocumentSubmit}
-                disabled={!canSubmit()}
-                className="w-full"
-              >
-                <PlusIcon className="h-4 w-4" />
-                Add Sources
-              </Button>
-            </div>
-          )}
-
-          <InputTypeSelector
-            inputType={inputType}
-            onInputTypeChange={onInputTypeChange}
-          />
-
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <SourceCounter
-                totalSources={getTotalSources()}
-                sourceLimit={sourceLimit}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay: 0.2 }}
+    >
+      <Card className="flex flex-col h-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Add Sources
+          </CardTitle>
+          <p className="text-sm text-muted-foreground mt-2">
+            Sources let the AI base its responses on the information that
+            matters most to you.
+          </p>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col">
+            {inputType === "upload" && (
+              <FileUpload
+                uploadedFiles={uploadedFiles}
+                onFileUpload={onFileUpload}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+                onRemoveFile={onRemoveFile}
               />
-            </div>
-            {getTotalSources() > 0 && (
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 h-12 text-red-500 hover:bg-destructive/10"
-                onClick={onClearAllSources}
-              >
-                Clear All
-              </Button>
+            )}
+
+            {inputType === "link" && (
+              <LinkInput
+                linkUrl={linkUrl}
+                linkUrls={linkUrls}
+                onLinkUrlChange={onLinkUrlChange}
+                onLinkKeyPress={onLinkKeyPress}
+                onRemoveLink={onRemoveLink}
+              />
+            )}
+
+            {inputType === "youtube" && (
+              <YouTubeInput
+                youtubeUrl={youtubeUrl}
+                youtubeTranscripts={youtubeTranscripts}
+                onYoutubeUrlChange={onYoutubeUrlChange}
+                onYoutubeKeyPress={onYoutubeKeyPress}
+                onRemoveTranscript={onRemoveTranscript}
+                loading={loading}
+              />
+            )}
+
+            {inputType === "text" && (
+              <TextInput
+                documentText={documentText}
+                onDocumentTextChange={onDocumentTextChange}
+              />
             )}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          <div className="space-y-4 mt-auto">
+            {inputType === "text" && (
+              <div className="flex items-center justify-between">
+                <Button
+                  onClick={onDocumentSubmit}
+                  disabled={!canSubmit()}
+                  className="w-full"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  Add Sources
+                </Button>
+              </div>
+            )}
+
+            <InputTypeSelector
+              inputType={inputType}
+              onInputTypeChange={onInputTypeChange}
+            />
+
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <SourceCounter
+                  totalSources={getTotalSources()}
+                  sourceLimit={sourceLimit}
+                />
+              </div>
+              {getTotalSources() > 0 && (
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 h-12 text-red-500 hover:bg-destructive/10"
+                  onClick={onClearAllSources}
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

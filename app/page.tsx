@@ -8,6 +8,7 @@ import { useRAGStore } from "@/lib/store";
 import { X } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { useEffect, useState } from "react";
+import { HyperText } from "@/components/magicui/hyper-text";
 
 export default function RAGApplication() {
   const {
@@ -131,7 +132,7 @@ export default function RAGApplication() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">
-              Better RAG
+              <HyperText>Better RAG</HyperText>
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
               Add sources and start asking questions
