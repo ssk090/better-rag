@@ -3,11 +3,11 @@
 import { Toast } from "@/components/ui/toast";
 import { ApiKeysDialog } from "@/components/api-keys-dialog";
 import { DocumentInputSection } from "@/components/document-input-section";
-import { ChatInterface } from "@/components/chat-interface";
+import { ChatInterface, ChatInterfaceRef } from "@/components/chat-interface";
 import { useRAGStore } from "@/lib/store";
 import { X } from "lucide-react";
 import { Footer } from "@/components/footer";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { HyperText } from "@/components/magicui/hyper-text";
 
 export default function RAGApplication() {
@@ -33,6 +33,7 @@ export default function RAGApplication() {
     // New state properties
     loading,
     error,
+    shouldFocusChat,
 
     // Setters
     setDocumentText,
@@ -66,6 +67,8 @@ export default function RAGApplication() {
     processDocumentsWithAI,
     setLoading,
     setError,
+    focusChatInput,
+    resetFocusChat,
   } = useRAGStore();
 
   const [mounted, setMounted] = useState(false);
@@ -73,6 +76,8 @@ export default function RAGApplication() {
   const [clientShowToast, setClientShowToast] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
   const [clientLoading, setClientLoading] = useState(false);
+
+  const chatInterfaceRef = useRef<ChatInterfaceRef>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -94,6 +99,20 @@ export default function RAGApplication() {
   useEffect(() => {
     setClientLoading(loading);
   }, [loading]);
+
+  // Focus chat input when shouldFocusChat is true
+  useEffect(() => {
+    if (shouldFocusChat && isDocumentSubmitted && mounted) {
+      // Small delay to ensure the chat interface is fully rendered
+      const timer = setTimeout(() => {
+        chatInterfaceRef.current?.focus();
+        // Reset the focus flag by calling the store function
+        resetFocusChat();
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [shouldFocusChat, isDocumentSubmitted, mounted, resetFocusChat]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -178,6 +197,7 @@ export default function RAGApplication() {
 
           <div className="flex flex-col">
             <ChatInterface
+              ref={chatInterfaceRef}
               messages={messages}
               currentMessage={currentMessage}
               isDocumentSubmitted={isDocumentSubmitted}

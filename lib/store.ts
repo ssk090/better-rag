@@ -45,6 +45,7 @@ interface RAGState {
   // New state properties
   loading: boolean;
   error: string | null;
+  shouldFocusChat: boolean;
 
   // Actions
   setDocumentText: (text: string) => void;
@@ -101,6 +102,8 @@ interface RAGState {
   updateFilesWithResults: (result: {
     documents: ProcessedDocumentResult[];
   }) => void;
+  focusChatInput: () => void;
+  resetFocusChat: () => void;
 }
 
 export const useRAGStore = create<RAGState>()(
@@ -137,6 +140,7 @@ export const useRAGStore = create<RAGState>()(
       // New state properties
       loading: false,
       error: null,
+      shouldFocusChat: false,
 
       // Actions
       setDocumentText: (text) => {
@@ -213,6 +217,11 @@ export const useRAGStore = create<RAGState>()(
               set((state) => ({ messages: [...state.messages, message] }));
             }, index * 500);
           });
+
+          // Trigger focus on chat input after text document is submitted
+          setTimeout(() => {
+            get().focusChatInput();
+          }, newMessages.length * 500 + 100);
         }
       },
 
@@ -342,6 +351,11 @@ export const useRAGStore = create<RAGState>()(
           showToast: true,
           toastMessage: `Successfully processed ${result.documents.length} files`,
         }));
+
+        // Trigger focus on chat input after file processing is complete
+        setTimeout(() => {
+          get().focusChatInput();
+        }, 100);
       },
 
       handleDragOver: (e) => {
@@ -573,6 +587,9 @@ export const useRAGStore = create<RAGState>()(
               messages: [...state.messages, transcriptMessage],
               isDocumentSubmitted: true,
             }));
+
+            // Trigger focus on chat input after transcript is added
+            get().focusChatInput();
           }, 300);
         } catch (error) {
           const errorMessage =
@@ -679,6 +696,11 @@ export const useRAGStore = create<RAGState>()(
                       ...response.documents,
                     ],
                   }));
+
+                  // Trigger focus on chat input after URL processing is complete
+                  setTimeout(() => {
+                    get().focusChatInput();
+                  }, 100);
                 } else {
                   throw new Error("Failed to process URL content");
                 }
@@ -996,6 +1018,14 @@ export const useRAGStore = create<RAGState>()(
             loading: false,
           });
         }
+      },
+
+      focusChatInput: () => {
+        set({ shouldFocusChat: true });
+      },
+
+      resetFocusChat: () => {
+        set({ shouldFocusChat: false });
       },
     }),
     {

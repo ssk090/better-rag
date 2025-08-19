@@ -8,7 +8,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageCircle, Bot, User, Send, Copy, Check } from "lucide-react";
 import { Message } from "@/lib/types";
 import { Input } from "./ui/input";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { motion } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -159,200 +165,231 @@ interface ChatInterfaceProps {
   onCurrentMessageChange: (message: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
+  focusOnInput?: boolean;
 }
 
-export function ChatInterface({
-  messages,
-  currentMessage,
-  isDocumentSubmitted,
-  loading,
-  onCurrentMessageChange,
-  onSendMessage,
-  onKeyPress,
-}: ChatInterfaceProps) {
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+export interface ChatInterfaceRef {
+  focus: () => void;
+}
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollElement = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      );
-      if (scrollElement) {
-        scrollElement.scrollTop = scrollElement.scrollHeight;
+export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(
+  (
+    {
+      messages,
+      currentMessage,
+      isDocumentSubmitted,
+      loading,
+      onCurrentMessageChange,
+      onSendMessage,
+      onKeyPress,
+      focusOnInput = false,
+    },
+    ref
+  ) => {
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Expose focus method to parent component
+    useImperativeHandle(ref, () => ({
+      focus: () => {
+        if (inputRef.current && isDocumentSubmitted) {
+          inputRef.current.focus();
+        }
+      },
+    }));
+
+    // Auto-scroll to bottom when new messages arrive
+    useEffect(() => {
+      if (scrollAreaRef.current) {
+        const scrollElement = scrollAreaRef.current.querySelector(
+          "[data-radix-scroll-area-viewport]"
+        );
+        if (scrollElement) {
+          scrollElement.scrollTop = scrollElement.scrollHeight;
+        }
       }
-    }
-  }, [messages]);
+    }, [messages]);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 0.3 }}
-    >
-      <Card className="flex flex-col h-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Chat Interface
-          </CardTitle>
-          <p className="text-sm text-muted-foreground mt-2">
-            Ask questions about your sources to get answers.
-          </p>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col">
-          <ScrollArea
-            ref={scrollAreaRef}
-            className="h-[calc(100vh-400px)] mb-4"
-          >
-            <div className="space-y-4 pr-4 pb-4">
-              {messages.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8 italic opacity-30">
-                  {isDocumentSubmitted
-                    ? "Start asking questions about your sources..."
-                    : "Please add sources first to begin chatting"}
-                </div>
-              ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${
-                      message.isUser ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {!message.isUser && (
-                      <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
-                        <AvatarFallback className="bg-accent text-accent-foreground">
-                          <Bot className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
+    // Focus input when focusOnInput prop changes to true
+    useEffect(() => {
+      if (focusOnInput && inputRef.current && isDocumentSubmitted) {
+        inputRef.current.focus();
+      }
+    }, [focusOnInput, isDocumentSubmitted]);
 
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.3 }}
+      >
+        <Card className="flex flex-col h-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Chat Interface
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Ask questions about your sources to get answers.
+            </p>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col">
+            <ScrollArea
+              ref={scrollAreaRef}
+              className="h-[calc(100vh-400px)] mb-4"
+            >
+              <div className="space-y-4 pr-4 pb-4">
+                {messages.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8 italic opacity-30">
+                    {isDocumentSubmitted
+                      ? "Start asking questions about your sources..."
+                      : "Please add sources first to begin chatting"}
+                  </div>
+                ) : (
+                  messages.map((message) => (
                     <div
-                      className={`max-w-[80%] p-3 rounded-lg ${
-                        message.isUser
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-card border"
+                      key={message.id}
+                      className={`flex gap-3 ${
+                        message.isUser ? "justify-end" : "justify-start"
                       }`}
                     >
-                      {message.isUser ? (
-                        <p className="text-sm break-words whitespace-pre-wrap">
-                          {message.content || ""}
-                        </p>
-                      ) : (
-                        <div className="chat-markdown">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              // Custom styling for code blocks
-                              code: ({
-                                inline,
-                                className,
-                                children,
-                                ...props
-                              }: any) => {
-                                const match = /language-(\w+)/.exec(
-                                  className || ""
-                                );
-                                return !inline ? (
-                                  <CodeBlock className={className}>
-                                    {children}
-                                  </CodeBlock>
-                                ) : (
-                                  <code
-                                    className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
+                      {!message.isUser && (
+                        <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
+                          <AvatarFallback className="bg-accent text-accent-foreground">
+                            <Bot className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+
+                      <div
+                        className={`max-w-[80%] p-3 rounded-lg ${
+                          message.isUser
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-card border"
+                        }`}
+                      >
+                        {message.isUser ? (
+                          <p className="text-sm break-words whitespace-pre-wrap">
+                            {message.content || ""}
+                          </p>
+                        ) : (
+                          <div className="chat-markdown">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                // Custom styling for code blocks
+                                code: ({
+                                  inline,
+                                  className,
+                                  children,
+                                  ...props
+                                }: any) => {
+                                  const match = /language-(\w+)/.exec(
+                                    className || ""
+                                  );
+                                  return !inline ? (
+                                    <CodeBlock className={className}>
+                                      {children}
+                                    </CodeBlock>
+                                  ) : (
+                                    <code
+                                      className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
+                                      {...props}
+                                    >
+                                      {children}
+                                    </code>
+                                  );
+                                },
+                                // Custom styling for links
+                                a: ({ children, href, ...props }: any) => (
+                                  <a
+                                    href={href}
+                                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     {...props}
                                   >
                                     {children}
-                                  </code>
-                                );
-                              },
-                              // Custom styling for links
-                              a: ({ children, href, ...props }: any) => (
-                                <a
-                                  href={href}
-                                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  {...props}
-                                >
-                                  {children}
-                                </a>
-                              ),
-                              // Custom styling for blockquotes
-                              blockquote: ({ children, ...props }: any) => (
-                                <blockquote
-                                  className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400"
-                                  {...props}
-                                >
-                                  {children}
-                                </blockquote>
-                              ),
-                              // Custom styling for lists
-                              ul: ({ children, ...props }: any) => (
-                                <ul
-                                  className="list-disc list-inside space-y-1"
-                                  {...props}
-                                >
-                                  {children}
-                                </ul>
-                              ),
-                              ol: ({ children, ...props }: any) => (
-                                <ol
-                                  className="list-decimal list-inside space-y-1"
-                                  {...props}
-                                >
-                                  {children}
-                                </ol>
-                              ),
-                            }}
-                          >
-                            {message.content || ""}
-                          </ReactMarkdown>
-                        </div>
+                                  </a>
+                                ),
+                                // Custom styling for blockquotes
+                                blockquote: ({ children, ...props }: any) => (
+                                  <blockquote
+                                    className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </blockquote>
+                                ),
+                                // Custom styling for lists
+                                ul: ({ children, ...props }: any) => (
+                                  <ul
+                                    className="list-disc list-inside space-y-1"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </ul>
+                                ),
+                                ol: ({ children, ...props }: any) => (
+                                  <ol
+                                    className="list-decimal list-inside space-y-1"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </ol>
+                                ),
+                              }}
+                            >
+                              {message.content || ""}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                        <p className="text-xs opacity-70 mt-1">
+                          {message.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
+
+                      {message.isUser && (
+                        <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
+                          <AvatarFallback className="bg-secondary text-secondary-foreground">
+                            <User className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
                       )}
-                      <p className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
                     </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
 
-                    {message.isUser && (
-                      <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
-                        <AvatarFallback className="bg-secondary text-secondary-foreground">
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                ))
-              )}
+            <div className="flex gap-2">
+              <Input
+                ref={inputRef}
+                placeholder={
+                  isDocumentSubmitted
+                    ? "Ask a question about your sources..."
+                    : "Add sources first"
+                }
+                value={currentMessage}
+                onChange={(e) => onCurrentMessageChange(e.target.value)}
+                onKeyDown={onKeyPress}
+                disabled={!isDocumentSubmitted}
+                className="flex-1 min-h-[60px] max-h-[120px]"
+              />
+              <Button
+                onClick={onSendMessage}
+                disabled={!currentMessage.trim() || !isDocumentSubmitted}
+                size="icon"
+                className="h-[60px] w-[60px]"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
             </div>
-          </ScrollArea>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+);
 
-          <div className="flex gap-2">
-            <Input
-              placeholder={
-                isDocumentSubmitted
-                  ? "Ask a question about your sources..."
-                  : "Add sources first"
-              }
-              value={currentMessage}
-              onChange={(e) => onCurrentMessageChange(e.target.value)}
-              onKeyDown={onKeyPress}
-              disabled={!isDocumentSubmitted}
-              className="flex-1 min-h-[60px] max-h-[120px]"
-            />
-            <Button
-              onClick={onSendMessage}
-              disabled={!currentMessage.trim() || !isDocumentSubmitted}
-              size="icon"
-              className="h-[60px] w-[60px]"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
+ChatInterface.displayName = "ChatInterface";
